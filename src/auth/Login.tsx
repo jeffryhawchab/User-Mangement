@@ -45,12 +45,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800">
       <form
         onSubmit={handleSubmit}
-        className="bg-gray-100 p-6 rounded-lg shadow-md w-full max-w-md space-y-4"
+        className="bg-white  p-6 rounded-lg shadow-md w-full max-w-md space-y-4"
       >
-        <h2 className="text-2xl font-semibold text-center text-gray-800">
+        <h2 className="text-2xl font-semibold text-center text-gray-800 dark:text-white">
           Login
         </h2>
         <input
