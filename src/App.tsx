@@ -1,18 +1,42 @@
-import './App.css'
-import Navbar  from './components/Navbar';
+import './App.css';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+import Navbar from './components/Navbar';
+import { Searchbar } from './components/SearchBar';
 import { Cardcontainer } from './components/cardContaier';
-import { Searchbar } from './components/SearchBar'
+import Login from './auth/Login';
+import ProtectedRoute from './components/ProtectedRoute';
 
-function App() {
-
-
+function DashboardLayout() {
   return (
-    <div >
-      <Navbar/>
-      <Searchbar/>
-      <Cardcontainer/>
+    <div>
+      <Navbar />
+      <Searchbar />
+      <Cardcontainer />
     </div>
-  )
+  );
 }
 
-export default App
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Redirect unknown routes */}
+        <Route path="*" element={<Login />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
