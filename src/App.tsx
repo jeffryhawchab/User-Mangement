@@ -1,42 +1,28 @@
-import './App.css';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+// App.tsx
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Dashboard } from './screens/Dashboard';
+import { Login } from './auth/Login';
+import { useAuthStore } from './auth/authstore';
 
-import Navbar from './components/Navbar';
-import { Searchbar } from './components/SearchBar';
-import { Cardcontainer } from './components/cardContaier';
-import Login from './auth/Login';
-import ProtectedRoute from './components/ProtectedRoute';
-
-function DashboardLayout() {
-  return (
-    <div>
-      <Navbar />
-      <Searchbar />
-      <Cardcontainer />
-    </div>
-  );
-}
-
-function App() {
+// Change this to default export
+const App = () => {
+  const { accessToken } = useAuthStore();
+  
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }
+        <Route 
+          path="/dashboard" 
+          element={accessToken ? <Dashboard /> : <Navigate to="/login" replace />} 
         />
-
-        {/* Redirect unknown routes */}
-        <Route path="*" element={<Login />} />
+        <Route 
+          path="/" 
+          element={accessToken ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} 
+        />
       </Routes>
     </BrowserRouter>
   );
 }
 
-export default App;
+export default App; // This is the crucial line

@@ -1,27 +1,21 @@
-
 import { useState, useEffect } from 'react';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { useAuthStore, useThemeStore } from '../auth/authstore'; // Importing the Zustand store
 
-const Navbar = () => {
-  const [darkMode, setDarkMode] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+const Navbar: React.FC = () => {
+  // Retrieve values and actions from the store
+  const { darkMode, toggleTheme } = useThemeStore();
+  const { clearAuth } = useAuthStore(); // Get clearAuth function to log out
 
-  // Toggle dark mode and save preference to localStorage
-  const toggleTheme = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', JSON.stringify(newDarkMode));
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false); // Track mobile menu state
+
+  // Handle logout functionality
+  const handleLogout = () => {
+    clearAuth(); // Clear authentication data from the store
+    window.location.href = '/login'; // Redirect to login page (or use React Router for routing)
   };
 
-  // Check for saved user preference on component mount
-  useEffect(() => {
-    const savedMode = localStorage.getItem('darkMode');
-    if (savedMode) {
-      setDarkMode(JSON.parse(savedMode));
-    }
-  }, []);
-
-  // Apply dark mode class to document root
+  // Apply dark mode to document on change
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -32,9 +26,10 @@ const Navbar = () => {
 
   return (
     <nav className="bg-[#3251D0] text-white shadow-lg">
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo/Brand */}
+          {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <span className="text-xl font-bold">User Management</span>
           </div>
@@ -47,13 +42,15 @@ const Navbar = () => {
             >
               Create User
             </button>
-            
+
             <button
               className="px-3 py-2 rounded-md text-sm font-medium bg-red-500 hover:bg-red-600 transition-colors"
-              onClick={() => console.log('Logout clicked')}
+              onClick={handleLogout} // Logout button
             >
               Logout
             </button>
+
+            {/* Dark Mode Toggle Button */}
             <button
               onClick={toggleTheme}
               className="p-2 rounded-full hover:bg-[#4a65d8] transition-colors"
@@ -112,12 +109,12 @@ const Navbar = () => {
           >
             Create User
           </button>
-          
+
           <button
             className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-[#4a65d8] transition-colors flex items-center"
             onClick={() => {
               toggleTheme();
-              setIsMenuOpen(false);
+              setIsMenuOpen(false); // Close mobile menu
             }}
           >
             {darkMode ? (
@@ -132,12 +129,12 @@ const Navbar = () => {
               </>
             )}
           </button>
-          
+
           <button
             className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-[#4a65d8] transition-colors"
             onClick={() => {
-              console.log('Logout clicked');
-              setIsMenuOpen(false);
+              handleLogout();
+              setIsMenuOpen(false); // Close mobile menu
             }}
           >
             Logout

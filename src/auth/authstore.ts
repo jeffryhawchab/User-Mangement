@@ -1,11 +1,16 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-interface AuthState {
-  accessToken: string | null;
-  expiresIn: number | null;
-  setAuth: (token: string, expiresIn: number) => void;
-  logout: () => void;
+type AuthState = {
+  accessToken: string | null
+  expiresIn: number | null
+  setAuth: (token: string, expires: number) => void
+  clearAuth: () => void
+}
+
+type ThemeState = {
+  darkMode: boolean
+  toggleTheme: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -13,11 +18,19 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       accessToken: null,
       expiresIn: null,
-      setAuth: (token, expiresIn) => set({ accessToken: token, expiresIn }),
-      logout: () => set({ accessToken: null, expiresIn: null }),
+      setAuth: (token, expires) => set({ accessToken: token, expiresIn: expires }),
+      clearAuth: () => set({ accessToken: null, expiresIn: null }),
     }),
-    {
-      name: 'auth-storage', // key for localStorage
-    }
+    { name: 'auth-storage' }
   )
-);
+)
+
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set) => ({
+      darkMode: false,
+      toggleTheme: () => set((state) => ({ darkMode: !state.darkMode })),
+    }),
+    { name: 'theme-storage' }
+  )
+)

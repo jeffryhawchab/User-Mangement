@@ -1,12 +1,8 @@
-import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '../auth/authstore';
+import { Navigate } from 'react-router-dom'
+import { useAuthStore } from '../auth/authstore'
+import { JSX } from 'react'
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const accessToken = useAuthStore((state) => state.accessToken);
-
-  if (!accessToken) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
+export const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const { accessToken } = useAuthStore()
+  return accessToken ? children : <Navigate to="/login" replace />
 }
