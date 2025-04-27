@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../auth/authstore';
 import { useThemeStore } from '../auth/authstore';
 import Navbar from '../components/Navbar';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 type User = {
   id: string;
@@ -16,81 +19,88 @@ export const Dashboard = () => {
   const { accessToken, clearAuth } = useAuthStore();
   const { darkMode } = useThemeStore();
   const navigate = useNavigate();
-
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!accessToken) navigate('/login');
-  }, [accessToken, navigate]);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        setError('');
-
-        const url = searchTerm
-          ? `/api/users?search=${encodeURIComponent(searchTerm)}`
-          : '/api/users';
-
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            clearAuth();
-            navigate('/login');
-            return;
-          }
-          throw new Error(response.statusText);
-        }
-
-        const json = await response.json();
-        console.log('Raw API Response:', json);
-
-        const apiUsers = json?.result?.data?.users ?? [];
-
-        if (!Array.isArray(apiUsers)) {
-          throw new Error('Unexpected API response format');
-        }
-
-        const formattedUsers: User[] = apiUsers.map((user: any): User => ({
-          id: user.id ?? user._id ?? '',
-          name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.name || 'Unknown',
-          email: user.email || 'No email',
-          status: (user.status === 'active' ? 'active' : 'locked') as 'active' | 'locked',
-          date: user.dateOfBirth || user.date || new Date().toISOString(),
-        }));
-
-        setUsers(formattedUsers);
-      } catch (err) {
-        console.error('Error fetching users:', err);
-        setError('Failed to fetch users.');
-      } finally {
-        setLoading(false);
+  // Fetch users with React Query
+  const { data: users = [], isLoading, error } = useQuery<User[], Error>({
+    queryKey: ['users', searchTerm],
+    queryFn: async () => {
+      if (!accessToken) {
+        navigate('/login');
+        return [];
       }
-    };
 
-    if (accessToken) fetchUsers();
-  }, [accessToken, searchTerm, navigate, clearAuth]);
+      const url = searchTerm
+        ? `/api/users?search=${encodeURIComponent(searchTerm)}`
+        : '/api/users';
 
-  const handleDelete = async (userId: string) => {
-    try {
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          clearAuth();
+          navigate('/login');
+          throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to fetch users');
+      }
+
+      const json = await response.json();
+      const apiUsers = json?.result?.data?.users ?? json?.data?.users ?? [];
+
+      if (!Array.isArray(apiUsers)) {
+        throw new Error('Unexpected API response format');
+      }
+
+      return apiUsers.map((user: any): User => ({
+        id: user.id ?? user._id ?? '',
+        name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.name || 'Unknown',
+        email: user.email || 'No email',
+        status: (user.status === 'active' ? 'active' : 'locked') as 'active' | 'locked',
+        date: user.dateOfBirth || user.date || new Date().toISOString(),
+      }));
+    },
+    // Handle errors directly in the query function or globally
+  });
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      if (!response.ok) throw new Error('Failed to delete user');
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
-    } catch (err) {
-      console.error('Delete failed:', err);
-      setError('Failed to delete user. Try again.');
+      if (!response.ok) {
+        throw new Error('Failed to delete user');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User deleted successfully');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
     }
+  });
+
+  const handleDeleteClick = (userId: string) => {
+    setUserToDelete(userId);
+  };
+
+  const confirmDelete = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete);
+      setUserToDelete(null);
+    }
+  };
+
+  const handleEditClick = (userId: string) => {
+    navigate(`/dashboard/edit/${userId}`);
   };
 
   return (
@@ -107,11 +117,13 @@ export const Dashboard = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
         {error && (
-          <p className={`mt-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-600'}`}>{error}</p>
+          <p className={`mt-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+            {error.message}
+          </p>
         )}
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
@@ -124,42 +136,70 @@ export const Dashboard = () => {
           {users.map((user) => (
             <div
               key={user.id}
-              className={`shadow-md rounded-lg p-4 space-y-3 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+              className={`shadow-md rounded-lg p-4 space-y-3 transition-all hover:shadow-lg ${
+                darkMode ? 'bg-gray-800 hover:bg-gray-750' : 'bg-white hover:bg-gray-50'
+              }`}
             >
-              <div className="flex justify-center">
-                <div className={`${user.status === 'active' ? 'bg-green-500' : 'bg-red-500'} rounded-full h-4 w-4 absolute mt-1 mr-12`}></div>
+              <div className="flex justify-center relative">
+                <div 
+                  className={`absolute -top-1 -right-1 rounded-full h-4 w-4 ${
+                    user.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                  }`}
+                />
                 <div className="bg-[#3251D0] rounded-full flex items-center justify-center text-lg h-16 w-16 font-bold text-white">
                   {user.name.split(' ').map((n) => n[0]).join('').toUpperCase()}
                 </div>
               </div>
-              <h2 className={`font-bold text-lg text-center ${darkMode ? 'text-white' : 'text-black'}`}>{user.name}</h2>
+              <h2 className={`font-bold text-lg text-center truncate ${darkMode ? 'text-white' : 'text-black'}`}>
+                {user.name}
+              </h2>
               <div className="space-y-1">
-                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>Email: {user.email}</p>
-                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                  Status:
-                  <span className={`ml-1 px-2 py-1 rounded-full text-xs ${user.status === 'active' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+                <p className={`text-sm truncate ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                  Email: {user.email}
+                </p>
+                <div className="flex items-center">
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                    Status:
+                  </p>
+                  <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                    user.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                  } text-white`}>
                     {user.status}
                   </span>
-                </p>
+                </div>
                 <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                   Date: {new Date(user.date).toLocaleDateString()}
                 </p>
               </div>
-              <div className="flex justify-end space-x-2">
-                <button className="bg-[#3251D0] hover:bg-[#3c5cff] text-white px-3 py-1 rounded text-sm">
+              <div className="flex justify-end space-x-2 pt-2">
+                <button 
+                  onClick={() => handleEditClick(user.id)}
+                  className="bg-[#3251D0] hover:bg-[#3c5cff] text-white px-3 py-1 rounded text-sm transition-colors"
+                >
                   Edit
                 </button>
                 <button
-                  onClick={() => handleDelete(user.id)}
-                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                  onClick={() => handleDeleteClick(user.id)}
+                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                  disabled={deleteUserMutation.isPending}
                 >
-                  Delete
+                  {deleteUserMutation.isPending && userToDelete === user.id ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={!!userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        description="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 };

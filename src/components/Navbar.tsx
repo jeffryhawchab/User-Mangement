@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
-import { useAuthStore, useThemeStore } from '../auth/authstore'; // Importing the Zustand store
+import { useAuthStore, useThemeStore } from '../auth/authstore';
+import { useNavigate } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
-  // Retrieve values and actions from the store
   const { darkMode, toggleTheme } = useThemeStore();
-  const { clearAuth } = useAuthStore(); // Get clearAuth function to log out
+  const { clearAuth } = useAuthStore();
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const navigate = useNavigate();
 
-  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false); // Track mobile menu state
-
-  // Handle logout functionality
   const handleLogout = () => {
-    clearAuth(); // Clear authentication data from the store
-    window.location.href = '/login'; // Redirect to login page (or use React Router for routing)
+    clearAuth();
+    navigate('/login');
   };
 
-  // Apply dark mode to document on change
+  const handleCreateUser = () => {
+    navigate('/dashboard/new');
+  };
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -26,7 +28,6 @@ const Navbar: React.FC = () => {
 
   return (
     <nav className="bg-[#3251D0] text-white shadow-lg">
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -38,29 +39,24 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex md:items-center md:space-x-4">
             <button
               className="px-3 py-2 rounded-md text-sm font-medium bg-white text-[#3251D0] hover:bg-gray-300 transition-colors"
-              onClick={() => console.log('Create User clicked')}
+              onClick={handleCreateUser}
             >
               Create User
             </button>
 
             <button
               className="px-3 py-2 rounded-md text-sm font-medium bg-red-500 hover:bg-red-600 transition-colors"
-              onClick={handleLogout} // Logout button
+              onClick={handleLogout}
             >
               Logout
             </button>
 
-            {/* Dark Mode Toggle Button */}
             <button
               onClick={toggleTheme}
               className="p-2 rounded-full hover:bg-[#4a65d8] transition-colors"
               aria-label="Toggle theme"
             >
-              {darkMode ? (
-                <SunIcon className="h-5 w-5" />
-              ) : (
-                <MoonIcon className="h-5 w-5" />
-              )}
+              {darkMode ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
             </button>
           </div>
 
@@ -72,7 +68,6 @@ const Navbar: React.FC = () => {
               aria-expanded={isMenuOpen}
             >
               <span className="sr-only">Open main menu</span>
-              {/* Hamburger icon */}
               <svg
                 className={`${isMenuOpen ? 'hidden' : 'block'} h-6 w-6`}
                 xmlns="http://www.w3.org/2000/svg"
@@ -82,7 +77,6 @@ const Navbar: React.FC = () => {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              {/* Close icon */}
               <svg
                 className={`${isMenuOpen ? 'block' : 'hidden'} h-6 w-6`}
                 xmlns="http://www.w3.org/2000/svg"
@@ -103,7 +97,7 @@ const Navbar: React.FC = () => {
           <button
             className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-[#4a65d8] transition-colors"
             onClick={() => {
-              console.log('Create User clicked');
+              handleCreateUser();
               setIsMenuOpen(false);
             }}
           >
@@ -114,7 +108,7 @@ const Navbar: React.FC = () => {
             className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-[#4a65d8] transition-colors flex items-center"
             onClick={() => {
               toggleTheme();
-              setIsMenuOpen(false); // Close mobile menu
+              setIsMenuOpen(false);
             }}
           >
             {darkMode ? (
@@ -134,7 +128,7 @@ const Navbar: React.FC = () => {
             className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-[#4a65d8] transition-colors"
             onClick={() => {
               handleLogout();
-              setIsMenuOpen(false); // Close mobile menu
+              setIsMenuOpen(false);
             }}
           >
             Logout
